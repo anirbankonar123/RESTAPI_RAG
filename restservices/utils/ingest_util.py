@@ -4,7 +4,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings.openai import OpenAIEmbeddings
 from pinecone import Pinecone, PodSpec
 
-
+#initialize embeddings model in static context
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 pinecone = Pinecone(api_key=PINECONE_API_KEY)
@@ -27,7 +27,6 @@ def get_fileName(fileName):
 
 def get_embeddings(articles):
    embedded_doc = embeddings.embed_documents(articles)
-   # print(np.array(embedded_doc[0]).shape)
    return embedded_doc
 
 def ingest_doc(fileName):
@@ -64,25 +63,21 @@ def ingest_doc(fileName):
 
     if (len(prepped) >= 0):
         index.upsert(prepped)
-    print("page ct:" + str(page_ctr))
-    print("chunk ct:"+str(chunk_ctr))
-    print("doc added to pinecone index")
+
     return
 
 def list_vectordb():
-    stats = index.describe_index_stats()
-    print(stats)
+
     ret=[]
     res = index.query(vector=[0 for _ in range(1536)], top_k=10000,include_metadata=True, include_values=False)
-    print(len(res['matches']))
+
     for x in res['matches']:
         ret.append(x['metadata']['source'])
     return set(ret)
 
 def get_ids(fileName):
 
-    ret=[]
-    #res = index.query(vector=[0 for _ in range(1536)], top_k=10000,include_metadata=True, include_values=False)
+
     res = index.query(
         vector=[0 for _ in range(1536)],
         top_k=10000,
@@ -93,12 +88,11 @@ def get_ids(fileName):
         include_values=False
     )
 
-    print(len(res['matches']))
     id = []
     for x in res['matches']:
         id.append(x['id'])
-        ret.append(x['metadata']['source'])
-    print(set(ret))
+
+
     return id
 
 def delete_doc(id_arr):

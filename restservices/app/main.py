@@ -15,7 +15,7 @@ def read_root():
 
 """
 This POST API accepts a Query and returns the response from a set of Private documents
-The API takes optional parameters, top_k, modelName,temperature, top_p, max_tokens
+The API takes optional parameters, top_k_rag, single_response, modelName,temperature, top_p, max_tokens
 """
 @app.post("/query",response_model=data_models.Output,summary="query a set of docs",description="This POST API accepts a query as a text \
 The API takes optional parameters, modelName,top_k, temperature, top_p, max_tokens",response_description="The API returns the response of the Query, based on private documents \
@@ -31,8 +31,7 @@ async def query_api(query:str, modelName: data_models.ModelName,
     output = validator.validate(output, temperature, top_p, max_tokens)
     if (output.status=="failure"):
         return output
-    print("top_k:"+str(top_k_rag))
-    print("single_response:"+str(single_response))
+
     try:
         if (rerank=="True"):
             query_response, metadata_arr = qa_util.get_recommendations_withrerank(query, top_k_rag)
@@ -62,7 +61,7 @@ async def ingest_api(file_data: UploadFile = File(...)):
     output.errorMsg = ""
     file_path="uploadDocs"
     filepath = os.path.join(file_path, file_data.filename)
-    print(file_path)
+
     try:
         if not (os.path.exists(file_path)):
             os.mkdir(file_path)
@@ -80,7 +79,6 @@ async def ingest_api(file_data: UploadFile = File(...)):
 
     try:
         filepath = fileReader.read_doc(file_data, filepath)
-        print(filepath)
         ingest_util.ingest_doc(filepath)
     except Exception as error:
         output.status = "failure"
@@ -102,7 +100,6 @@ async def listdocs_api():
 
     try:
         listdocs = ingest_util.list_vectordb()
-        print(listdocs)
         output.response = list(listdocs)
     except Exception as error:
         output.status = "failure"

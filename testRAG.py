@@ -13,10 +13,12 @@ import cohere
 
 #Ref : https://www.pinecone.io/learn/series/rag/rerankers/
 
-# init client
+# init cohere client
 co = cohere.Client(os.getenv("COHERE_API_KEY"))
 
+# init embeddings Model
 embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
+
 create_DB=True
 
 utils = Utils()
@@ -24,6 +26,7 @@ PINECONE_API_KEY = utils.get_pinecone_api_key()
 OPENAI_API_KEY = utils.get_openai_api_key()
 pinecone = Pinecone(api_key=PINECONE_API_KEY)
 INDEX_NAME = "my-rag-index"
+
 if (create_DB):
     if INDEX_NAME in [index.name for index in pinecone.list_indexes()]:
       pinecone.delete_index(INDEX_NAME)
@@ -33,10 +36,11 @@ if (create_DB):
       spec=PodSpec(environment='gcp-starter', pod_type="starter", pods = 1))
     print("new DB created")
 
+#init pinecone index
 index = pinecone.Index(INDEX_NAME)
+
 def get_embeddings(articles):
    embedded_doc = embeddings.embed_documents(articles)
-   # print(np.array(embedded_doc[0]).shape)
    return embedded_doc
 
 def list_vectordb(index):
@@ -52,7 +56,6 @@ def list_vectordb(index):
 def get_ids(fileName,index):
 
     ret=[]
-    #res = index.query(vector=[0 for _ in range(1536)], top_k=10000,include_metadata=True, include_values=False)
     res = index.query(
         vector=[0 for _ in range(1536)],
         top_k=10000,
@@ -63,12 +66,11 @@ def get_ids(fileName,index):
         include_values=False
     )
 
-    print(len(res['matches']))
     id = []
     for x in res['matches']:
         id.append(x['id'])
         ret.append(x['metadata']['source'])
-    print(set(ret))
+
     return id
 
 def get_fileName(fileName):
@@ -120,21 +122,10 @@ def process_doc(fileName,index):
     print("doc added to pinecone index")
     return
 
-def get_docs(index, query: str, top_k: int):
-    # encode query
-    xq = get_embeddings([query])[0]
-    # search pinecone index
-    res = index.query(xq, top_k=top_k, include_metadata=True)
-    # get doc text
-    #print(res["matches"])
-    docs = {x["metadata"]['text']: i for i, x in enumerate(res["matches"])}
-    return docs
-
-
 
 def get_recommendations(pinecone_index, query, top_k=3, return_single=True):
   embed = get_embeddings([query])[0]
-  #print(embed)
+
   reco = pinecone_index.query(vector=embed, top_k=top_k, include_metadata=True, include_values=False)
 
   for x in reco['matches']:
@@ -143,8 +134,7 @@ def get_recommendations(pinecone_index, query, top_k=3, return_single=True):
   contexts = [
       x['metadata']['text'] for x in reco['matches']
   ]
-  print(len(contexts))
-  # print(contexts)
+
   template = """Answer the question based on the context below.\n\n Context: {context} \n
       Question : {query} \n
       Answer: """
@@ -164,7 +154,7 @@ def get_recommendations(pinecone_index, query, top_k=3, return_single=True):
 
 def get_recommendations_withrerank(pinecone_index, query, top_k=3):
   embed = get_embeddings([query])[0]
-  #print(embed)
+
   reco = pinecone_index.query(vector=embed, top_k=top_k, include_metadata=True, include_values=False)
   docs = {x["metadata"]['text']: i for i, x in enumerate(reco["matches"])}
 
@@ -177,7 +167,7 @@ def get_recommendations_withrerank(pinecone_index, query, top_k=3):
   contexts = [
       doc.document['text'] for doc in rerank_docs
   ]
-  # print(contexts)
+
   template = """Answer the question based on the context below.\n\n Context: {context} \n
       Question : {query} \n
       Answer: """
@@ -190,40 +180,21 @@ def get_recommendations_withrerank(pinecone_index, query, top_k=3):
   return
 
 if __name__ == "__main__":
-    print("hello")
 
-
-    # articles_index = pinecone.Index(INDEX_NAME)
+    articles_index = pinecone.Index(INDEX_NAME)
     # print(list_vectordb(articles_index))
     #id_arr = get_ids("Invoice-32646.pdf",articles_index)
-    # # print(len(id_arr))
     #delete_doc(id_arr)
 
-    # #process_doc("/home/anish/Downloads/IPCC_AR6_SYR_SPM.pdf",articles_index)
-    # #process_doc("/home/anish/Downloads/Invoice-32646.pdf",articles_index)
+    # #process_doc("IPCC_AR6_SYR_SPM.pdf",articles_index)
+    # #process_doc("Invoice-32646.pdf",articles_index)
     #
     # query = 'What book did Anirban buy and from whom?'
     # reco = get_recommendations(articles_index, query , top_k=1, return_single=True)
     #
     # reco = get_recommendations_withrerank(articles_index, query, top_k=5)
 
-    # docs = get_docs(articles_index,query,5)
-    #
-    # print("\n---\n".join(docs.keys()))
-    #
-    # rerank_docs = co.rerank(
-    #     query=query, documents=docs.keys(), top_n=25, model="rerank-english-v2.0"
-    # )
-    # print("after RERANK")
-    # #print(rerank_docs)
-    # for doc in rerank_docs:
-    #     print("\n---\n")
-    #     print(doc.document['text'])
-    # print([docs[doc.document["text"]] for doc in rerank_docs])
-
-    # res = list_vectordb(articles_index)
-    # print(res)
-
+   
 
 
 
